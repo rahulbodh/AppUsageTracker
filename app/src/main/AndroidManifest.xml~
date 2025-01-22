@@ -29,7 +29,7 @@
 
 
         <receiver
-            android:name=".ActivityRecognitionBroadcastReceiver"
+            android:name=".ActivityRecognitionReceiver"
             android:enabled="true"
             android:exported="false"
             android:permission="com.google.android.gms.permission.ACTIVITY_RECOGNITION" >

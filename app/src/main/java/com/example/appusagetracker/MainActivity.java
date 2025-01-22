@@ -31,15 +31,15 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSION_REQUEST_ACTIVITY_RECOGNITION = 100;
     private static final String TAG = "ActivityAPI";
-    private PendingIntent activityRecognitionPendingIntent;
     private ActivityRecognitionClient activityRecognitionClient;
+    private ActivityMainBinding binding;
 
     @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
+        binding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
         activityRecognitionClient = ActivityRecognition.getClient(this);
 
         // Check and request permission
@@ -76,23 +76,23 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startActivityRecognition() {
-        Intent intent = new Intent(this, ActivityRecognitionService.class);
-        activityRecognitionPendingIntent = PendingIntent.getService(
-                this, 0, intent, PendingIntent.FLAG_MUTABLE);
-
+        activityRecognitionClient = ActivityRecognition.getClient(this);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
+            // Request permissions if not granted
             return;
         }
-        Task<Void> task = activityRecognitionClient.requestActivityUpdates(3000, activityRecognitionPendingIntent);
-        task.addOnSuccessListener(aVoid -> Log.d(TAG, "Activity recognition started."))
-                .addOnFailureListener(e -> Log.e(TAG, "Failed to start activity recognition", e));
+        activityRecognitionClient.requestActivityUpdates(
+                        3000, // Frequency of activity updates
+                        getActivityRecognitionPendingIntent()
+                ).addOnSuccessListener(aVoid ->
+                        Log.d("ActivityRecognition", "Activity recognition started")
+                )
+                .addOnFailureListener(e -> Log.e("ActivityRecognition", "Activity recognition failed: " + e.getMessage()));
+    }
+
+    private PendingIntent getActivityRecognitionPendingIntent() {
+        Intent intent = new Intent(this, ActivityRecognitionBroadcastReceiver.class);
+        return PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_MUTABLE);
     }
 
     @Override
@@ -102,20 +102,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void stopActivityRecognition() {
-        if (activityRecognitionClient != null && activityRecognitionPendingIntent != null) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
-                return;
-            }
-            Task<Void> task = activityRecognitionClient.removeActivityUpdates(activityRecognitionPendingIntent);
-            task.addOnSuccessListener(aVoid -> Log.d(TAG, "Activity recognition stopped."))
-                    .addOnFailureListener(e -> Log.e(TAG, "Failed to stop activity recognition", e));
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        } else {
+            activityRecognitionClient.removeActivityUpdates(getActivityRecognitionPendingIntent());
+
         }
     }
 }
